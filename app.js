@@ -1,13 +1,19 @@
-const fs = require('fs');
 const express = require('express');
-
 const app = express();
-const OUTPUT_FILE = 'result.txt';
+const fs = require('fs');
+
+const {
+  getMedian,
+  getMode,
+  getMean,
+  writeToFile,
+  OUTPUT_FILE
+} = require('./helpers');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/** show results of previous quries */
+/** route showing results of previous quries */
 app.get('/results', (req, res, next) => {
   // checks if file exists
   if (!fs.existsSync(OUTPUT_FILE)) {
@@ -27,6 +33,7 @@ app.get('/results', (req, res, next) => {
   });
 });
 
+/** route to handle deleting all results */
 app.delete('/results', (req, res, next) => {
   fs.unlink(OUTPUT_FILE, error => {
     if (error) {
@@ -69,62 +76,40 @@ app.use((req, res, next) => {
   return next();
 });
 
-app.get('/mean', (req, res, next) => {
-  const numberArr = req.query.nums.split(',').map(Number);
-  const saveStatus = req.query.save;
+/** middlware to adjust values of inputs */
+app.use((req, res, next) => {
+  console.log(req.query.nums);
+  req.query.nums = req.query.nums.split(',').map(Number);
+  return next();
+});
 
-  const total =
-    numberArr.reduce((tally, num) => {
-      return tally + num;
-    }, 0) / numberArr.length;
-  const output = `The mean of ${req.query.nums} is ${total}.\n`;
+/** route handling getting mean of input array */
+app.get('/mean', (req, res, next) => {
+  const numberArr = req.query.nums;
+  const saveStatus = req.query.save;
+  const output = getMean(numberArr);
   if (saveStatus !== 'false') {
     writeToFile(output);
   }
   return res.send(`<div><b>${output}</b></div>`);
 });
 
+/** route handling getting median of input array */
 app.get('/median', (req, res, next) => {
   const saveStatus = req.query.save;
-  const numberArr = req.query.nums
-    .split(',')
-    .map(Number)
-    .sort();
-
-  let result;
-  // midPoint for odd length arr or high midpoint for even length arr
-  let midPoint = Math.floor(numberArr.length / 2);
-
-  // logic to check if even
-  if (numberArr.length % 2 === 0) {
-    result = (numberArr[midPoint] + numberArr[midPoint - 1]) / 2;
-  } else {
-    result = numberArr[midPoint];
-  }
-  const output = `The median of ${req.query.nums} is ${result}.\n`;
+  const numberArr = req.query.nums;
+  const output = getMedian(numberArr);
   if (saveStatus !== 'false') {
     writeToFile(output);
   }
   return res.send(`<div><b>${output}</b></div>`);
 });
 
+/** route handling getting mode of input array */
 app.get('/mode', (req, res, next) => {
   const saveStatus = req.query.save;
-  const numberArr = req.query.nums.split(',').map(Number);
-  const numberObj = {};
-  numberArr.forEach(number => {
-    numberObj[number] = (numberObj[number] || 0) + 1;
-  });
-
-  let maxCount = 0;
-  let bestKey = 0;
-  for (let key in numberObj) {
-    if (numberObj[key] > maxCount) {
-      maxCount = numberObj[key];
-      bestKey = key;
-    }
-  }
-  const output = `The mode of ${req.query.nums} is ${bestKey}\n`;
+  const numberArr = req.query.nums;
+  const output = getMode(numberArr);
   if (saveStatus !== 'false') {
     writeToFile(output);
   }
@@ -144,14 +129,4 @@ app.use((err, req, res, next) => {
   return res.status(status).send(`${err}`);
 });
 
-function writeToFile(output) {
-  fs.appendFile(OUTPUT_FILE, output, err => {
-    if (err) {
-      console.error(err, 'oh noes');
-      process.exit(1);
-    }
-    console.log('Request written!');
-  });
-}
-
-app.listen(3000, () => console.log('App on port 3000'));
+module.exports = app;
