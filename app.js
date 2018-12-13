@@ -78,7 +78,6 @@ app.use((req, res, next) => {
 
 /** middlware to adjust values of inputs */
 app.use((req, res, next) => {
-  console.log(req.query.nums);
   req.query.nums = req.query.nums.split(',').map(Number);
   return next();
 });
@@ -114,6 +113,29 @@ app.get('/mode', (req, res, next) => {
     writeToFile(output);
   }
   return res.send(`<div><b>${output}</b></div>`);
+});
+
+/** route handling getting mean, mode, and median from input array */
+app.get('/all', (req, res, next) => {
+  const saveStatus = req.query.save;
+  const numberArr = req.query.nums;
+
+  // maps all functions in list to result of func + numberArr as parameter
+  const allOutputs = [getMean, getMedian, getMode].map(fnName => {
+    return fnName(numberArr);
+  });
+
+  if (saveStatus !== 'false') {
+    writeToFile(allOutputs.join(''));
+  }
+
+  // formats each output element in allOutputs with html formatting
+  const resOutput = allOutputs
+    .map(output => {
+      return `<div><b>${output}</b></div><br></br>`;
+    })
+    .join('');
+  return res.send(resOutput);
 });
 
 /** helper function to catch all other inputs */

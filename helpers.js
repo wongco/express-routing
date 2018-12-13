@@ -5,8 +5,8 @@ const OUTPUT_FILE = 'result.txt';
 /** get the Mean of the numbers in numberArr */
 function getMean(numberArr) {
   const total =
-    numberArr.reduce((tally, num) => {
-      return tally + num;
+    numberArr.reduce((total, num) => {
+      return total + num;
     }, 0) / numberArr.length;
   return `The mean of ${numberArr} is ${total}.\n`;
 }
