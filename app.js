@@ -7,15 +7,34 @@ const OUTPUT_FILE = 'result.txt';
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+/** show results of previous quries */
 app.get('/results', (req, res, next) => {
-  fs.readFile('results.txt', 'utf8', (error, data) => {
+  // checks if file exists
+  if (!fs.existsSync(OUTPUT_FILE)) {
+    let error = new Error('<div><b>There are no results yet.</b></div>');
+    error.status = 404;
+    return next(error);
+  }
+
+  fs.readFile(OUTPUT_FILE, 'utf8', (error, data) => {
+    if (error) {
+      error.status = 404;
+      error.message =
+        '<div><b>There are problems reading previous results.</b></div>';
+      return next(error);
+    }
+    return res.send(data);
+  });
+});
+
+app.delete('/results', (req, res, next) => {
+  fs.unlink(OUTPUT_FILE, error => {
     if (error) {
       error.status = 404;
       error.message = 'There are no results yet.';
-      next(error);
-    } else {
-      res.send(data);
+      return next(error);
     }
+    return res.send('<div><b>All prior results have been cleared.</b></div>');
   });
 });
 
@@ -23,7 +42,7 @@ app.get('/results', (req, res, next) => {
 app.use((req, res, next) => {
   // check nums even exits
   if (!req.query.nums) {
-    const error = new Error('nums are required.');
+    const error = new Error('<div><b>nums are required.</b></div>');
     error.status = 404;
     return next(error);
   }
@@ -38,7 +57,7 @@ app.use((req, res, next) => {
   const badNums = [];
   for (let i = 0; i < inputsArr.length; i++) {
     if (Number.isNaN(Number(inputsArr[i]))) {
-      badNums.push(`${inputsArr[i]} is not a number.\n`);
+      badNums.push(`<div><b>${inputsArr[i]} is not a number.</b></div>\n`);
     }
   }
 
@@ -52,17 +71,21 @@ app.use((req, res, next) => {
 
 app.get('/mean', (req, res, next) => {
   const numberArr = req.query.nums.split(',').map(Number);
+  const saveStatus = req.query.save;
 
   const total =
     numberArr.reduce((tally, num) => {
       return tally + num;
     }, 0) / numberArr.length;
   const output = `The mean of ${req.query.nums} is ${total}.\n`;
-  writeToFile(output);
-  return res.send(output);
+  if (saveStatus !== 'false') {
+    writeToFile(output);
+  }
+  return res.send(`<div><b>${output}</b></div>`);
 });
 
 app.get('/median', (req, res, next) => {
+  const saveStatus = req.query.save;
   const numberArr = req.query.nums
     .split(',')
     .map(Number)
@@ -79,11 +102,14 @@ app.get('/median', (req, res, next) => {
     result = numberArr[midPoint];
   }
   const output = `The median of ${req.query.nums} is ${result}.\n`;
-  writeToFile(output);
-  res.send(output);
+  if (saveStatus !== 'false') {
+    writeToFile(output);
+  }
+  return res.send(`<div><b>${output}</b></div>`);
 });
 
 app.get('/mode', (req, res, next) => {
+  const saveStatus = req.query.save;
   const numberArr = req.query.nums.split(',').map(Number);
   const numberObj = {};
   numberArr.forEach(number => {
@@ -99,13 +125,15 @@ app.get('/mode', (req, res, next) => {
     }
   }
   const output = `The mode of ${req.query.nums} is ${bestKey}\n`;
-  writeToFile(output);
-  res.send(output);
+  if (saveStatus !== 'false') {
+    writeToFile(output);
+  }
+  return res.send(`<div><b>${output}</b></div>`);
 });
 
 /** helper function to catch all other inputs */
 app.use((req, res, next) => {
-  let error = new Error('Resource cannot be found.');
+  let error = new Error('<div><b>Resource cannot be found.</b></div>');
   error.status = 404;
   return next(error);
 });
@@ -113,7 +141,7 @@ app.use((req, res, next) => {
 /* error handling function */
 app.use((err, req, res, next) => {
   let status = err.status || 500;
-  return res.status(status).send(`error: ${err}`);
+  return res.status(status).send(`${err}`);
 });
 
 function writeToFile(output) {
