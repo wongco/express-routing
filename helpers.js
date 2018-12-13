@@ -45,7 +45,10 @@ function getMode(numberArr) {
 }
 
 function writeToFile(output) {
-  fs.appendFile(OUTPUT_FILE, output, err => {
+  const time = new Date();
+  const timeStampedOutput = `${time.toLocaleString()} - ${output}`;
+
+  fs.appendFile(OUTPUT_FILE, timeStampedOutput, err => {
     if (err) {
       console.error(err, 'oh noes');
       process.exit(1);

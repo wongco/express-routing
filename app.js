@@ -126,7 +126,9 @@ app.get('/all', (req, res, next) => {
   });
 
   if (saveStatus !== 'false') {
-    writeToFile(allOutputs.join(''));
+    allOutputs.forEach(output => {
+      writeToFile(output);
+    });
   }
 
   // formats each output element in allOutputs with html formatting
